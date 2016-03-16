@@ -23,7 +23,8 @@ describe('server', function() {
                 body += chunk;
             });
             res.on('end', function() {
-                assert.deepEqual(JSON.parse(body), {valid: true});
+                assert.ok(JSON.parse(body)['valid']);
+                assert.deepEqual(JSON.parse(body)['valid'], true);
                 done();
             });
         });
@@ -55,7 +56,7 @@ describe('server', function() {
                 body += chunk;
             });
             res.on('end', function() {
-                assert.deepEqual(JSON.parse(body), {valid: false});
+                assert.ok(!(JSON.parse(body)['valid']));
                 done();
             });
         });
@@ -71,6 +72,38 @@ describe('server', function() {
             };
         });
         hash.end('p4zw0rd');
+    });
+
+    it('should set session token cookie for valid user', function(done) {
+        options = {
+            hostname: 'localhost',
+            port: 8080,
+            method: 'PUT',
+            path: '/',
+            headers: {'Content-Type': 'application/json'},
+        }
+        var req = http.request(options, function(res) {
+            var body = '';
+            res.on('data', function(chunk) {
+                body += chunk;
+            });
+            res.on('end', function() {
+                assert.ok(JSON.parse(body)['session_token']);
+                done();
+            });
+        });
+        var hash = crypto.createHash('md5');
+        hash.on('readable', () => {
+            var data = hash.read();
+            if (data) {
+                auth_data = {
+                    username: 'usr',
+                    passwd_hash: data.toString('hex'),
+                };
+                req.end(JSON.stringify(auth_data));
+            };
+        });
+        hash.end('passwd');
     });
 
     after(function() {
